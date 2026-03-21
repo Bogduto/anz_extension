@@ -1,0 +1,10 @@
+repository id
+user id 
+
+day date
+
+slices
+createdAt 
+updatedAt
+
+
