@@ -5,14 +5,6 @@ import { authController, AuthService, AuthSessionMenager } from './services/Auth
 import { directoryController, DirectoryManager, DirectoryService, SessionManager, SessionService } from './services/DirectoryService';
 import { History } from './services/HistoryService';
 
-// остается что добавить.
-
-// -------- 1. проверку на то что когда extension не запущен, что files, langs не будет ничего не добавляться
-// -------- 2. Добавить типы для функций
-// 3. Добавить в репозиторий этот код
-// 4. Создать отдельную ветку для документации
-// 5. Создать отдельную ветку для оптимизации
-// 6. Наложить тесты на критическую логику
 
 export async function activate(ctx: vscode.ExtensionContext) {
 	// auth
