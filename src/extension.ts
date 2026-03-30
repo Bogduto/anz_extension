@@ -1,14 +1,15 @@
 import * as vscode from 'vscode';
 import { PreciseTimer, timerController, TimerService, TimerView } from './services/TimerServices';
 import { MENU_COMMAND, menuPicker } from './quickpick/picker';
-import { authController, AuthService, AuthSessionMenager } from './services/AuthService';
+
 import { directoryController, DirectoryManager, DirectoryService, SessionManager, SessionService } from './services/DirectoryService';
 import { History } from './services/HistoryService';
+import { authController, AuthManager, AuthService } from './services/auth';
 
 
 export async function activate(ctx: vscode.ExtensionContext) {
 	// auth
-	const authSessionMenager = new AuthSessionMenager(ctx);
+	const authSessionMenager = new AuthManager(ctx);
 	const authService = new AuthService(authSessionMenager);
 
 	// directory
