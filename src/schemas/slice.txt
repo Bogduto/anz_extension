@@ -1,8 +1,0 @@
-start
-finish
-duration
-files
-directories
-langs
-
-commits history?

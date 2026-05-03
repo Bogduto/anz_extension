@@ -1,6 +1,6 @@
 {
-  "name": "anzio-extension",
-  "displayName": "anzio-extension",
+  "name": "anz",
+  "displayName": "anz",
   "publisher": "bogduto",
   "description": "",
   "version": "0.0.1",
@@ -15,33 +15,38 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "configuration": {
+      "properties": {
+        "anz.backupInterval": {
+          "type": "number",
+          "default": 300000,
+          "description": "Interval in milliseconds for automatic backup. Default is 5 minutes (300000 ms)."
+        }
+      }
+    },
     "commands": [
       {
         "command": "anz.LOGIN",
-        "title": "Login to Anzio"
+        "title": "Login to Anz"
       },
       {
         "command": "anz.LOGOUT",
-        "title": "Logout from Anzio"
+        "title": "Logout from Anz"
       },
       {
         "command": "anz.CHECK_AUTH",
-        "title": "Check Anzio authentication status"
+        "title": "Check Anz authentication status"
       },
       {
-        "command": "anz.helloWorld",
-        "title": "Hello World"
-      },
-      {
-        "command": "anz.start",
+        "command": "anz.START",
         "title": "Start timer"
       },
       {
-        "command": "anz.stop",
+        "command": "anz.STOP",
         "title": "Stop timer"
       },
       {
-        "command": "anz.menu",
+        "command": "anz.MENU",
         "title": "Menu actions"
       }
     ]
@@ -62,7 +67,7 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
+    "@types/node": "^22.19.17",
     "@types/vscode": "^1.109.0",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",

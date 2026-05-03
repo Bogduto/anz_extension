@@ -1,13 +1,15 @@
 import { ExtensionContext, window, commands, Uri } from "vscode";
 import { AuthManager, AuthService } from "./";
-import { LOGIN_COMMAND, LOGOUT_COMMAND } from "./auth.variables";
+import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from "./auth.variables";
+import { LOGIN_COMMAND, LOGOUT_COMMAND } from "../../commands";
 
 
 async function authController(ctx: ExtensionContext, authSessionMenager: AuthManager, authService: AuthService): Promise<void> {
     const restored = await authSessionMenager.restoreSession();
-
+    
     if (!restored) {
         window.showInformationMessage("No active session, please login");
+        // return;
     }
 
     ctx.subscriptions.push(
@@ -17,9 +19,6 @@ async function authController(ctx: ExtensionContext, authSessionMenager: AuthMan
         commands.registerCommand(LOGOUT_COMMAND, () => {
             authService.logout();
         }),
-        // commands.registerCommand(CHECK_AUTH_COMMAND, () => {
-        //     return authService.checkAuth();
-        // })
     );
 
     window.registerUriHandler({
@@ -28,10 +27,12 @@ async function authController(ctx: ExtensionContext, authSessionMenager: AuthMan
                 const fragment = uri.fragment;
                 const params = new URLSearchParams(fragment);
 
-                const accessToken = params.get("access_token");
-                const refreshToken = params.get("refresh_token");
+                const accessToken = params.get(ACCESS_TOKEN_KEY);
+                const refreshToken = params.get(REFRESH_TOKEN_KEY);
 
-                if (!accessToken || accessToken.split(".").length !== 3) {
+                const isValidToken = accessToken && accessToken.split(".").length === 3;
+
+                if (!isValidToken) {
                     throw new Error("No valid access token");
                 }
 

@@ -1,43 +1,36 @@
 import * as vscode from 'vscode';
-import { PreciseTimer, timerController, TimerService, TimerView } from './services/TimerServices';
-import { MENU_COMMAND, menuPicker } from './quickpick/picker';
-
-import { directoryController, DirectoryManager, DirectoryService, SessionManager, SessionService } from './services/DirectoryService';
-import { History } from './services/HistoryService';
+import { registerMenu } from './services/quickpick/picker';
 import { authController, AuthManager, AuthService } from './services/auth';
+import { timerController, TimerService, TimerView } from './services/timer';
+import { PreciseTimer } from './services/timer/core';
+import { autoRestore } from './services/backup/BackupController';
+import activitiesRegistrationController from './services/activities/Activitycontroller';
 
+export const NODE_ENV = process.env.NODE_ENV as "production" | "debug";
 
 export async function activate(ctx: vscode.ExtensionContext) {
-	// auth
-	const authSessionMenager = new AuthManager(ctx);
-	const authService = new AuthService(authSessionMenager);
 
-	// directory
-	const sessionManager = new SessionManager();
-	const sessionService = new SessionService(sessionManager, authService);
+    // auth
+    const authManager = new AuthManager(ctx);
+    const authService = new AuthService(authManager);
+    // time
+    const timer = new PreciseTimer();
+    const service = new TimerService(timer);
+    const view = new TimerView(service);
 
-	// Directory History
+    // controllers
 
-	const history = new History(); // files, langs
+    authController(ctx, authManager, authService);
+    timerController(ctx, view, service, authManager);
 
-	const directoryManager = new DirectoryManager();
-	const directoryService = new DirectoryService(directoryManager, sessionService, authService, history);
+    activitiesRegistrationController(service);
 
-	// time
-	const timer = new PreciseTimer();
-	const service = new TimerService(timer, sessionService, history);
-	const view = new TimerView(service);
+    // use _isStopped from timer into register to make timer command toggle start/stop
+    registerMenu(authService, service);
 
-	// controllers
-
-	authController(ctx, authSessionMenager, authService);
-	timerController(ctx, authService, timer, service, view);
-	directoryController(ctx, directoryService);
-
-	vscode.commands.registerCommand(MENU_COMMAND, async () => {
-		await menuPicker();
-	});
-
+    // autoRestore(ctx, service); // one time restore on extension start
 }
 
-export function deactivate() { }
+export function deactivate() {
+}
+

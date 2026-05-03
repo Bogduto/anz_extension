@@ -1,25 +1,46 @@
-import { ExtensionContext, window } from "vscode";
+import { EventEmitter, ExtensionContext } from "vscode";
 import { supabase } from "../../lib/supabase";
 import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from "./auth.variables";
 
 class AuthManager {
+    private _onDidChangeAuth = new EventEmitter<boolean>();
+    public readonly onDidChangeAuth = this._onDidChangeAuth.event;
+
+    private _isLoggedIn: boolean = false;
+
     constructor(private ctx: ExtensionContext) { }
 
     public async restoreSession(): Promise<boolean> {
         const accessToken = this.ctx.globalState.get<string>(ACCESS_TOKEN_KEY);
         const refreshToken = this.ctx.globalState.get<string>(REFRESH_TOKEN_KEY);
+        console.log(`[RESTORE SESSION PART 1] ACCESS ${accessToken} REFRESH ${refreshToken}`);
 
-        if (!accessToken || !refreshToken) return false;
+        if (!accessToken || !refreshToken) {
+            this._isLoggedIn = false;
+            this._onDidChangeAuth.fire(false);
+            return false;
+        }
 
         await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
 
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (!error && user) {
-            window.showInformationMessage(`Welcome back!`);
-            return true;
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        console.log('[REFRESH]', refreshData, refreshError);
+
+        // Save the new tokens so the old refresh token isn't reused next time
+        if (refreshData?.session) {
+            await this.ctx.globalState.update(ACCESS_TOKEN_KEY, refreshData.session.access_token);
+            await this.ctx.globalState.update(REFRESH_TOKEN_KEY, refreshData.session.refresh_token);
         }
 
-        return false;
+        const { data: { user }, error } = await supabase.auth.getUser();
+        console.log(`[RESTORE SESSION PART 2] error msg ${error?.message}`);
+
+        const isValid = !error && !!user;
+        console.log(`[RESTORE SESSION PART 3] IS VALID ${isValid}`);
+
+        this._isLoggedIn = isValid;
+        this._onDidChangeAuth.fire(isValid);
+        return isValid;
     }
 
     public async setSession(accessToken: string, refreshToken: string): Promise<void> {
@@ -29,28 +50,25 @@ class AuthManager {
         });
 
         const { error } = await supabase.auth.getUser();
-        if (error) throw error;
+        if (error) throw new Error("Failed to get user");
 
         await this.ctx.globalState.update(ACCESS_TOKEN_KEY, accessToken);
-
         await this.ctx.globalState.update(REFRESH_TOKEN_KEY, refreshToken);
+
+        this._isLoggedIn = true; // 🔥 ВАЖНО
+        this._onDidChangeAuth.fire(true);
     }
 
     public async clearSession(): Promise<void> {
         await this.ctx.globalState.update(ACCESS_TOKEN_KEY, null);
         await this.ctx.globalState.update(REFRESH_TOKEN_KEY, null);
-    }
 
-    public get accessToken(): string | undefined {
-        return this.ctx.globalState.get(ACCESS_TOKEN_KEY);
-    }
-
-    public get refreshToken(): string | undefined {
-        return this.ctx.globalState.get(REFRESH_TOKEN_KEY);
+        this._isLoggedIn = false; // 🔥 ВАЖНО
+        this._onDidChangeAuth.fire(false);
     }
 
     public get isLoggedIn(): boolean {
-        return !!this.accessToken;
+        return this._isLoggedIn;
     }
 }
 

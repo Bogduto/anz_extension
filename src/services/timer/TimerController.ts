@@ -1,46 +1,63 @@
 import { ExtensionContext, commands, window } from "vscode";
-import { AuthService } from "../auth";
-import { PreciseTimer, TimerService, TimerView, START_COMMAND, STOP_COMMAND } from "../TimerServices";
+import { TimerService, TimerView } from ".";
+import { AuthManager } from "../auth";
+import { START_TIMER_COMMAND, STOP_TIMER_COMMAND, RESET_TIMER_COMMAND } from "../../commands";
+import { runBackupCircle, stopBackupCircle } from "../backup/BackupController";
 
-async function timerController(ctx: ExtensionContext): Promise<void> {
-    // const timer = new PreciseTimer();
-    // const service = new TimerService(timer);
-    // const view = new TimerView(service);
+async function timerController(ctx: ExtensionContext, timerView: TimerView, timerService: TimerService, authManager: AuthManager): Promise<void> {
+    timerView.register(ctx);
 
-    view.register(ctx);
+    timerView.isRestored();
 
     ctx.subscriptions.push(
-        commands.registerCommand(START_COMMAND, async () => {
+        commands.registerCommand(START_TIMER_COMMAND, async () => {
+            try {
+                if (!authManager.isLoggedIn) {
+                    throw new Error("You must be logged in to start the timer.");
+                }
 
-            // auth check before starting the timer
-            const isLoggedIn = auth.checkAuth();
+                timerService.start();
 
-            if (isLoggedIn) {
-                service.start();
-                return;
+                runBackupCircle(ctx, timerService);
+            } catch (error) {
+                window.showErrorMessage("Failed to start timer");
             }
-
-            window.showInformationMessage("Please log in first");
         }),
 
-        commands.registerCommand(STOP_COMMAND, async () => {
+        commands.registerCommand(STOP_TIMER_COMMAND, async () => {
             try {
-                await service.stop();
-            } catch (error) {
-                window.showInformationMessage(error.message);
+                if (!authManager.isLoggedIn) {
+                    throw new Error("You must be logged in to stop the timer.");
+                }
+
+                await timerService.stop();
+
+                stopBackupCircle(ctx);
+            } catch (error: any) {
+                window.showErrorMessage(error.message);
+            }
+        }),
+        commands.registerCommand(RESET_TIMER_COMMAND, async () => {
+            try {
+                if (!authManager.isLoggedIn) {
+                    throw new Error("You must be logged in to reset the timer.");
+                }
+
+                await timerService.reset();
+
+                stopBackupCircle(ctx);
+            } catch (error: any) {
+                window.showErrorMessage(error.message);
             }
         }),
     );
 
-    const isLoggedIn = await commands.executeCommand<boolean>("anz.CHECK_AUTH");
-
-    // move it to extension.ts and execute as an command
-    if (isLoggedIn) {
-        service.start();
-        console.log("Timer started automatically");
-    } else {
-        console.log("User not logged in, timer not started");
-    }
+    authManager.onDidChangeAuth((isLoggedIn) => {
+        if (!isLoggedIn) {
+            timerService.stop();
+            window.showInformationMessage("You have been logged out. Timer stopped.");
+        }
+    });
 }
 
 export default timerController;
