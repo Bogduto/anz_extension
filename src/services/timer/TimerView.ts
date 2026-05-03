@@ -14,15 +14,17 @@ class TimerView {
     }
 
     public isRestored() {
-        this.statusService.onDidUpdateTime(() => {
-            this.render();
+        this.statusService.onDidUpdateTime((isRunning) => {
+            if (isRunning) {
+                this.render();
+            }
         })
     }
 
     public register(context: ExtensionContext): void {
         this.statusBarItem.show();
         this.statusBarItem.command = MENU_COMMAND;
-        
+
         context.subscriptions.push(this.statusBarItem);
 
         this.intervalId = setInterval(() => {

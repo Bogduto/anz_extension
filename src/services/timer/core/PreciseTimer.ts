@@ -11,7 +11,7 @@ class PreciseTimer {
         this._startTime = performance.now();
         this._startTimeStamp = timeNow();
         this._pausedTime = 0;
-        this._isPaused = false;
+        this._isPaused = true;
         this._isStopped = false;
     }
 

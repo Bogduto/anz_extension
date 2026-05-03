@@ -7,8 +7,6 @@ import { runBackupCircle, stopBackupCircle } from "../backup/BackupController";
 async function timerController(ctx: ExtensionContext, timerView: TimerView, timerService: TimerService, authManager: AuthManager): Promise<void> {
     timerView.register(ctx);
 
-    timerView.isRestored();
-
     ctx.subscriptions.push(
         commands.registerCommand(START_TIMER_COMMAND, async () => {
             try {

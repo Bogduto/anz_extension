@@ -21,6 +21,10 @@ export function getActiveFile(): string | null {
     return activeFile;
 }
 
+export function historySize(): number {
+    return historyList.length;
+}
+
 export function setActiveFile(file: string | null) {
     activeFile = file;
 }
