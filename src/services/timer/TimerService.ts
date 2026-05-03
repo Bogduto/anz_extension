@@ -127,6 +127,8 @@ class TimerService {
             }
 
             await insertActivity(payload);
+
+            clearHistory();
         }
 
         activity_id = null;
