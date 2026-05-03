@@ -5,29 +5,36 @@ import { getActiveFile, openNewSession, closeActiveSession, setActiveFile } from
 import * as vscode from 'vscode';
 
 function activitiesRegistrationController(timer: TimerService) {
+    // Handle the file that's already open when the extension starts
+    const currentEditor = vscode.window.activeTextEditor;
+    if (currentEditor) {
+        const filePath = currentEditor.document.uri.fsPath;
+        if (isInRepository(filePath)) {
+            setActiveFile(filePath);
+        }
+    }
 
+    // Responsible ONLY for keeping the session open while typing
     vscode.workspace.onDidChangeTextDocument((event) => {
+        const editor = vscode.window.activeTextEditor;
+
+        if (!editor || editor.document !== event.document) return;
+        if (event.contentChanges.length === 0) return;
         if (!timer.isRunningState) return;
 
         const filePath = event.document.uri.fsPath;
-        const activeFile = getActiveFile();
 
-        // Only care about edits to the currently tracked file
-        if (filePath !== activeFile) return;
         if (!isInRepository(filePath)) return;
 
-        const now = timeNow();
-
-        openNewSession(filePath, event.document.languageId, now);
+        openNewSession(filePath, event.document.languageId, timeNow());
     });
 
-
+    // Responsible ONLY for tracking which file is active
     vscode.window.onDidChangeActiveTextEditor((editor) => {
         const now = timeNow();
         const prevFile = getActiveFile();
 
         if (!editor) {
-            // Editor closed — close the active file's interval and stop tracking
             closeActiveSession(prevFile, now);
             setActiveFile(null);
             return;
@@ -36,20 +43,14 @@ function activitiesRegistrationController(timer: TimerService) {
         const filePath = editor.document.uri.fsPath;
 
         if (!isInRepository(filePath)) {
-            // Switched to a file outside the repo — close previous and stop tracking
             closeActiveSession(prevFile, now);
             setActiveFile(null);
             return;
         }
 
-        // Close the previous file's interval, then open a new one for the incoming file
         closeActiveSession(prevFile, now);
-
-        openNewSession(filePath, editor.document.languageId, now);
-
         setActiveFile(filePath);
     });
-
 }
 
 export default activitiesRegistrationController;
