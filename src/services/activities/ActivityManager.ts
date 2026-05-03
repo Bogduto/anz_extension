@@ -1,4 +1,6 @@
+import { workspace } from "vscode";
 import normalizePath from "../../utils/normalizePath";
+export const IGNORE_FILE_MIN_DURATION = workspace.getConfiguration('anz').get<number>('ignoreFileMinDuration') ?? 1000 * 60 * 5; // 5 minutes: 1000 * 60 * 5
 
 export type TimeInterval = {
     enter_time: number;
@@ -42,6 +44,22 @@ export function clearHistory(): void {
 }
 
 /**
+ * Filters out sessions with total duration less than the specified minimum duration.
+ * Returns a new filtered history without modifying the original.
+ */
+export function filterHistoryByMinDuration(minDuration: number): void {
+    const filtered = historyList.filter(session => {
+        const totalDuration = session.intervals.reduce((sum, interval) => {
+            const closeTime = interval.close_time ?? Date.now();
+            return sum + (closeTime - interval.enter_time);
+        }, 0);
+        return totalDuration >= minDuration;
+    });
+
+    setHistory(filtered);
+}   
+
+/**
  * Closes the currently active file's open interval and returns the full history.
  * Throws if there is no active file or no open interval to close.
  */
@@ -52,15 +70,23 @@ export function finalizeHistory(): HistorySessions {
 
     const closed = closeActiveSession(activeFile, Date.now());
 
+    if (IGNORE_FILE_MIN_DURATION) {
+        filterHistoryByMinDuration(IGNORE_FILE_MIN_DURATION);
+    }
+
     if (!closed) {
         throw new Error(`Could not close interval for active file: ${activeFile}`);
+    }
+    
+    if (historySize() === 0) {
+        throw new Error(`No sessions`);
     }
 
     return historyList;
 }
 
 function createNewSession(pathname: string, name: string, language: string): void {
-    
+
     const newSession = {
         pathname,
         name,
@@ -107,9 +133,9 @@ function getOrCreateSession(pathname: string, language: string): HistorySession 
         for (const duplicate of duplicateSessions) {
             // may it be here? duplicate
             session.intervals.push(...duplicate.intervals);
-            
+
             console.log("[INTERVALS ADDED] ", session.intervals);
-            
+
 
             const duplicateIndex = historyList.indexOf(duplicate);
             if (duplicateIndex !== -1) {

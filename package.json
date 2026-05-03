@@ -21,6 +21,11 @@
           "type": "number",
           "default": 300000,
           "description": "Interval in milliseconds for automatic backup. Default is 5 minutes (300000 ms)."
+        },
+        "anz.ignoreFileMinDuration": {
+          "type": "number",
+          "default": 300000,
+          "description": "Minimum duration in milliseconds for which a file must be open before it's backed up. If less than this value, the file won't be written to the system. Default is 5 minutes (300000 ms)."
         }
       }
     },
