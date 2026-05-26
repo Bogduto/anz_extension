@@ -1,7 +1,14 @@
 const esbuild = require("esbuild");
+const dotenv = require("dotenv");
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
+
+const env = dotenv.config().parsed || {};
+const define = {};
+for (const [key, value] of Object.entries(env)) {
+    define[`process.env.${key}`] = JSON.stringify(value);
+}
 
 /**
  * @type {import('esbuild').Plugin}
@@ -37,6 +44,7 @@ async function main() {
 		outfile: 'dist/extension.js',
 		external: ['vscode'],
 		logLevel: 'silent',
+		define,
 		plugins: [
 			/* add to the end of plugins array */
 			esbuildProblemMatcherPlugin,
