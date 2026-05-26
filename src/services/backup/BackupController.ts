@@ -23,7 +23,6 @@ export function runBackupCircle(ctx: ExtensionContext, timerService: TimerServic
 
             // Skip save if timer isn't running or history is empty — nothing worth persisting
             if (!timerService.isRunningState || history.length === 0) {
-                console.log(`[IF] Skipping — running: ${timerService.isRunningState}, history len: ${history.length}`);
                 return;
             }
 
@@ -42,7 +41,6 @@ export function runBackupCircle(ctx: ExtensionContext, timerService: TimerServic
                 history,
             };
 
-            console.log(`[DATA] Saving snapshot, elapsed: ${elapsed}ms`);
 
             await saveSession(ctx, data);
 

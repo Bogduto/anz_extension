@@ -32,10 +32,6 @@ class PreciseTimer {
         this._isPaused = true;
     }
 
-    restore(savedElapsedMs: number): void {
-        this._pausedTime = savedElapsedMs;
-    }
-
     get startTime(): number {
         return this._startTime;
     }
