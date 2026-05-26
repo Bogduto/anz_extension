@@ -3,6 +3,7 @@ import { timeNow } from "../../utils/time";
 import { TimerService } from "../timer";
 import { getActiveFile, openNewSession, closeActiveSession, setActiveFile } from "./ActivityManager";
 import * as vscode from 'vscode';
+import { resetIdleTimer } from "./AfkManager";
 
 function activitiesRegistrationController(timer: TimerService) {
     // Handle the file that's already open when the extension starts
@@ -14,8 +15,12 @@ function activitiesRegistrationController(timer: TimerService) {
         }
     }
 
+    vscode.window.onDidChangeTextEditorSelection(() => resetIdleTimer("alt+tab"));
+
     // Responsible ONLY for keeping the session open while typing
     vscode.workspace.onDidChangeTextDocument((event) => {
+        resetIdleTimer("AFK");
+
         const editor = vscode.window.activeTextEditor;
 
         if (!editor || editor.document !== event.document) return;
@@ -31,6 +36,7 @@ function activitiesRegistrationController(timer: TimerService) {
 
     // Responsible ONLY for tracking which file is active
     vscode.window.onDidChangeActiveTextEditor((editor) => {
+        resetIdleTimer("AFK");
         const now = timeNow();
         const prevFile = getActiveFile();
 
@@ -50,6 +56,8 @@ function activitiesRegistrationController(timer: TimerService) {
 
         closeActiveSession(prevFile, now);
         setActiveFile(filePath);
+
+        openNewSession(filePath, editor.document.languageId, now);
     });
 }
 
