@@ -18,9 +18,11 @@ export async function menuPicker(authService: AuthService, timer: TimerService) 
 
     const resetOption: Option = { label: '$(refresh) Reset Timer', command: RESET_TIMER_COMMAND };
 
-    const timerOption: Option = timer.isRunningState
-        ? { label: '$(debug-pause) Stop Timer', command: STOP_TIMER_COMMAND }
-        : { label: '$(play) Start Timer', command: START_TIMER_COMMAND };
+    const timerOption: Option | null = authService.checkAuth()
+        ? (timer.isRunningState
+            ? { label: '$(debug-pause) Stop Timer', command: STOP_TIMER_COMMAND }
+            : { label: '$(play) Start Timer', command: START_TIMER_COMMAND })
+        : null;
 
     const authOption: Option = authService.checkAuth()
         ? { label: "Logout", command: LOGOUT_COMMAND }
@@ -30,9 +32,8 @@ export async function menuPicker(authService: AuthService, timer: TimerService) 
         timerOption,
         resetOption,
         authOption,
-        configurationOption
-        // settings
-    ];
+        configurationOption,
+    ].filter((item): item is Option => item !== null);
 
     const picked = await window.showQuickPick(items, {
         placeHolder: 'Select an action'
@@ -42,6 +43,7 @@ export async function menuPicker(authService: AuthService, timer: TimerService) 
 
     await commands.executeCommand(picked.command, ...(picked.args ?? []));
 }
+
 
 export function registerMenu(authService: AuthService, timer: TimerService) {
     commands.registerCommand(MENU_COMMAND, async () => {
