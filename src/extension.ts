@@ -6,7 +6,7 @@ import { PreciseTimer } from './services/timer/core';
 import { autoRestore } from './services/backup/BackupController';
 import activitiesRegistrationController from './services/activities/Activitycontroller';
 
-export const NODE_ENV = process.env.NODE_ENV as "production" | "debug";
+export const NODE_ENV = process.env.NODE_ENV as "production" | "development";
 
 export async function activate(ctx: vscode.ExtensionContext) {
 
@@ -28,7 +28,7 @@ export async function activate(ctx: vscode.ExtensionContext) {
     // use _isStopped from timer into register to make timer command toggle start/stop
     registerMenu(authService, service);
 
-    // autoRestore(ctx, service); // one time restore on extension start
+    autoRestore(ctx, service); // one time restore on extension start
 }
 
 export function deactivate() {

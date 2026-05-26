@@ -1,5 +1,7 @@
 import { workspace } from "vscode";
 import normalizePath from "../../utils/normalizePath";
+import { isDevelopment } from "../../utils/envHelper";
+
 export const IGNORE_FILE_MIN_DURATION = workspace.getConfiguration('anz').get<number>('ignoreFileMinDuration') ?? 1000 * 60 * 5; // 5 minutes: 1000 * 60 * 5
 
 export type TimeInterval = {
@@ -69,8 +71,8 @@ export function finalizeHistory(): HistorySessions {
     }
 
     const closed = closeActiveSession(activeFile, Date.now());
-
-    if (IGNORE_FILE_MIN_DURATION) {
+    
+    if (IGNORE_FILE_MIN_DURATION && !isDevelopment) {
         filterHistoryByMinDuration(IGNORE_FILE_MIN_DURATION);
     }
 
@@ -79,26 +81,11 @@ export function finalizeHistory(): HistorySessions {
     }
     
     if (historySize() === 0) {
+        console.log("All sessions were filtered out by minimum duration. Returning empty history.", getHistory());
         throw new Error(`No sessions`);
     }
 
     return historyList;
-}
-
-function createNewSession(pathname: string, name: string, language: string): void {
-
-    const newSession = {
-        pathname,
-        name,
-        language,
-        intervals: []
-    } as HistorySession;
-
-    historyList.push(newSession);
-}
-
-function updateSessionInterval(idx: number) {
-    // find and update interval
 }
 
 function getOrCreateSession(pathname: string, language: string): HistorySession {
@@ -110,7 +97,6 @@ function getOrCreateSession(pathname: string, language: string): HistorySession 
         const fileName = pathname.split(/[\\/]/).pop() as string;
 
         // createNewSession()
-
         session = {
             pathname: normalized,
             name: fileName,
@@ -161,6 +147,8 @@ export function getActiveSession(): HistorySession | undefined {
  * Returns true if an interval was successfully closed, false otherwise.
  */
 export function closeActiveSession(pathname: string | null, closeTime: number): boolean {
+    console.log('[closeActiveSession]', normalizePath(pathname ?? 'null'));
+
     if (!pathname) return false;
 
     const normalized = normalizePath(pathname);
@@ -189,6 +177,8 @@ export function openNewSession(
     languageId: string,
     enterTime: number
 ): HistorySession | undefined {
+    console.log('[openNewSession]', normalizePath(filePath));
+
     const session = getOrCreateSession(filePath, languageId);
 
     // Don't open a duplicate interval if one is already open for this file

@@ -8,6 +8,7 @@ import { toSessionDTO } from "../../api/dto/sessionDTO";
 import { toWorkspaceDTO, Workspace } from "../../api/dto/workspaceDTO";
 import { PayloadDTO } from "../../api/dto/payloadDTO";
 import { NODE_ENV } from "../../extension";
+import { isDevelopment } from "../../utils/envHelper";
 
 let activity_id: number | null = null;
 
@@ -74,13 +75,13 @@ class TimerService {
             p_sessions: sessionDTO
         };
 
-        if (NODE_ENV === "debug") {
+        if (isDevelopment) {
             const v_activity_id = 1;
             activity_id = v_activity_id;
+
+            console.log("Payload for stop:", payload);
             return;
         }
-
-        console.log("Payload for stop:", payload);
 
         const v_activity_id = await insertActivity(payload);
         activity_id = v_activity_id;
@@ -121,7 +122,7 @@ class TimerService {
                 p_sessions: sessionDTO
             } as PayloadDTO;
 
-            if (NODE_ENV === "debug") {
+            if (isDevelopment) {
                 console.log("Payload for reset:", payload);
                 return;
             }
