@@ -1,4 +1,5 @@
 import { HistorySessions } from "../../services/activities/ActivityManager";
+import { timeNow } from "../../utils/time";
 
 export type SessionDTO = {
     name: string;
@@ -15,7 +16,7 @@ export const toSessionDTO = (historySessions: HistorySessions): SessionDTO[] => 
             language: session.language,
             pathname: session.pathname,
             enter_time: interval.enter_time,
-            close_time: interval.close_time ?? 0,
+            close_time: interval.close_time ?? timeNow(),
         }))
     );
 

@@ -16,22 +16,24 @@ class TimerView {
     public register(context: ExtensionContext): void {
         this.statusBarItem.show();
         this.statusBarItem.command = MENU_COMMAND;
-
-        // check isRunning is true
-
         context.subscriptions.push(this.statusBarItem);
 
+        this.render();
 
-        this.intervalId = setInterval(() => {
-            this.render();
-        }, 100);
+        context.subscriptions.push(
+            this.statusService.onDidUpdateTime((isRunning) => {
+                if (isRunning) {
+                    this.intervalId = setInterval(() => this.render(), 100);
+                } else {
+                    clearInterval(this.intervalId);
+                    this.intervalId = undefined;
+                    this.render();
+                }
+            })
+        );
 
         context.subscriptions.push({
-            dispose: () => {
-                if (this.intervalId) {
-                    clearInterval(this.intervalId);
-                }
-            }
+            dispose: () => clearInterval(this.intervalId)
         });
     }
     private render(): void {

@@ -442,30 +442,13 @@ interface Session {
 
 ### 🟡 Залишилось — важливо
 
-1. **`BackupController.run()`** — `activeFile` ще передається в об'єкт `data`, але вже відсутній в інтерфейсі `BackupData` → TypeScript excess property error. Потрібно прибрати рядок `activeFile: this.activityManager.getActiveFile()`
-
-2. **`stop()` не перевіряє `historySize()` перед `finalizeHistory()`** — якщо таймер запущений але жоден файл не редагувався, `finalizeHistory()` кине `Error("No active file to finalize")`. Таймер зупиниться але стан залишиться inconsistent. Варто додати перевірку:
-    ```typescript
-    if (this.activityManager.historySize() === 0) {
-        this.activityManager.clearHistory();
-        this._onDidUpdateTime.fire(false);
-        return;
-    }
-    ```
-
-3. **`close_time: interval.close_time ?? 0`** в `sessionDTO.ts` — якщо інтервал ще відкритий (`close_time === null`), на бекенд відправляється `0` (epoch `1970-01-01`). Варто передавати `Date.now()` замість `0`
-
-5. **AFK сесії потрапляють в API** — `'AFK'` і `'alt+tab'` зберігаються як pathname і відправляються на бекенд разом зі звичайними файлами. Варто фільтрувати в `finalizeHistory()` або `toSessionDTO()`
+1. Якщо користувач взагалі нічого не робив, то при закритті користувач буде получати помилку не про те що закриється не може, а повідомляться буде про те що користувач взагалі не працював
 
 ---
 
 ### 🟢 Nice-to-have
 
-6. **`TimerView.isRestored()`** — метод визначений але ніколи не викликається. Dead code
-7. **`TimerView` ре-рендериться кожні 100ms** навіть коли таймер зупинений — оптимізація: рендерити тільки при `isRunning === true`
-8. **`CHECK_AUTH_COMMAND`** — визначено в `commands.ts` але ніде не реєструється
 9. **`activationEvents: ["*"]`** — розширення активується при будь-якій події. Краще `onStartupFinished`
-10. **Мертві файли** — `readActiveFile.ts`, `currentDirectory.ts`, `activity.types.ts` ніде не імпортуються
 11. **Написати юніт-тести** — `extension.test.ts` містить тільки placeholder
 12. **`noImplicitReturns: true`** у `tsconfig.json` — зараз закоментовано
 

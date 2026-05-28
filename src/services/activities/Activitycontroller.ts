@@ -60,6 +60,9 @@ function activitiesRegistrationController(
 
         activityManager.closeActiveSession(prevFile, now);
         activityManager.setActiveFile(filePath);
+
+        if (!timer.isRunningState) return;
+
         activityManager.openNewSession(filePath, editor.document.languageId, now);
     });
 }

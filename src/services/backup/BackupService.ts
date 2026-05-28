@@ -6,7 +6,7 @@ export const BACKUP_FILE_NAME = 'backup.json';
 export const BACKUP_INTERVAL = workspace.getConfiguration('anz').get<number>('backupInterval') ?? 1000 * 60 * 5; // 5 minutes: 1000 * 60 * 5
 
 export interface BackupData {
-    timer: number;
+    startTimeStamp: number;
     history: HistorySessions;
 }
 
@@ -46,16 +46,6 @@ async function getSession<T>(fileUri: Uri): Promise<T | null> {
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
-
-/** Returns true if a backup file exists. */
-export const hasBackup = async (ctx: ExtensionContext): Promise<boolean> => {
-    try {
-        await workspace.fs.stat(getBackupPath(ctx));
-        return true;
-    } catch {
-        return false;
-    }
-};
 
 /** Persist current session data to disk. */
 export async function saveSession(ctx: ExtensionContext, data: Record<string, unknown>): Promise<void> {

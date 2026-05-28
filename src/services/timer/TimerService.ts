@@ -1,4 +1,4 @@
-import { EventEmitter, window } from "vscode";
+import { EventEmitter } from "vscode";
 import { PreciseTimer, TimerFormatter } from "./core";
 import { getUserId, insertActivity } from "../../lib/supabase";
 import { titleFromPathname } from "../../utils/tittle";
@@ -20,18 +20,6 @@ class TimerService {
         private activityManager: ActivityManager
     ) { }
 
-    public toggle(): void {
-        if (this.isRunning) {
-            this.stop();
-        } else {
-            this.start();
-        }
-    }
-
-    public startTime() {
-        return this.preciseTimer.startTime;
-    }
-
     public start(): void {
         if (this.isRunning) return;
 
@@ -45,6 +33,13 @@ class TimerService {
 
         this.isRunning = false;
         this.preciseTimer.pause();
+
+        const ishistoryEmpty = this.activityManager.historySize() === 0;
+
+        if (ishistoryEmpty) {
+            this._onDidUpdateTime.fire(false);
+            return;
+        }
 
         const historySessions = this.activityManager.finalizeHistory();
 
@@ -120,6 +115,10 @@ class TimerService {
         }
 
         this.activityId = null;
+    }
+
+    public startTimeStamp(): number {
+        return this.preciseTimer.startTimeStamp;
     }
 
     public getElapsedMs(): number {

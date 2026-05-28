@@ -28,7 +28,7 @@ class BackupController {
                 console.log("[CIRCLE] Updated");
 
                 const history = this.activityManager.getHistory();
-                const elapsed = this.timerService.getElapsedMs();
+                const elapsed = this.timerService.startTimeStamp();
 
                 // Skip save if timer isn't running or history is empty — nothing worth persisting
                 if (!this.timerService.isRunningState || history.length === 0) {
@@ -46,7 +46,7 @@ class BackupController {
                 }
 
                 const data: BackupData = {
-                    timer: elapsed,
+                    startTimeStamp: elapsed,
                     history,
                 };
 
@@ -96,7 +96,7 @@ class BackupController {
         const payload: PayloadDTO = {
             p_activity_id: null,
             p_workspace: { ...p_workspace, name: workspaceTitle },
-            p_start: response.timer,
+            p_start: response.startTimeStamp,
             p_sessions: sessionDTO,
         };
 
