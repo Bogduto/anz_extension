@@ -2,9 +2,15 @@ import { ExtensionContext, commands, window } from "vscode";
 import { TimerService, TimerView } from ".";
 import { AuthManager } from "../auth";
 import { START_TIMER_COMMAND, STOP_TIMER_COMMAND, RESET_TIMER_COMMAND } from "../../commands";
-import { runBackupCircle, stopBackupCircle } from "../backup/BackupController";
+import BackupController from "../backup/BackupController";
 
-async function timerController(ctx: ExtensionContext, timerView: TimerView, timerService: TimerService, authManager: AuthManager): Promise<void> {
+async function timerController(
+    ctx: ExtensionContext,
+    timerView: TimerView,
+    timerService: TimerService,
+    authManager: AuthManager,
+    backupController: BackupController
+): Promise<void> {
     timerView.register(ctx);
 
     ctx.subscriptions.push(
@@ -15,8 +21,7 @@ async function timerController(ctx: ExtensionContext, timerView: TimerView, time
                 }
 
                 timerService.start();
-
-                runBackupCircle(ctx, timerService);
+                backupController.run();
             } catch (error) {
                 window.showErrorMessage("Failed to start timer");
             }
@@ -29,12 +34,12 @@ async function timerController(ctx: ExtensionContext, timerView: TimerView, time
                 }
 
                 await timerService.stop();
-
-                stopBackupCircle(ctx);
+                backupController.stop();
             } catch (error: any) {
                 window.showErrorMessage(error.message);
             }
         }),
+
         commands.registerCommand(RESET_TIMER_COMMAND, async () => {
             try {
                 if (!authManager.isLoggedIn) {
@@ -42,8 +47,7 @@ async function timerController(ctx: ExtensionContext, timerView: TimerView, time
                 }
 
                 await timerService.reset();
-
-                stopBackupCircle(ctx);
+                backupController.stop();
             } catch (error: any) {
                 window.showErrorMessage(error.message);
             }

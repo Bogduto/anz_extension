@@ -1,5 +1,5 @@
 import { env, Uri, window } from "vscode";
-import { SUPABASE_AUTH_PROVIDER, SUPABASE_URL } from "../../lib/supabase";
+import { logoutFromSupabase, SUPABASE_AUTH_PROVIDER, SUPABASE_URL } from "../../lib/supabase";
 
 import { REDIRECT_URI } from "./auth.variables";
 import { AuthManager } from ".";
@@ -14,6 +14,8 @@ class AuthService {
 
     public logout(): void {
         this.authSessionMenager.clearSession();
+
+        logoutFromSupabase();
 
         window.showInformationMessage("Logged out from Supabase");
     }

@@ -3,8 +3,11 @@ import { registerMenu } from './services/quickpick/picker';
 import { authController, AuthManager, AuthService } from './services/auth';
 import { timerController, TimerService, TimerView } from './services/timer';
 import { PreciseTimer } from './services/timer/core';
-import { autoRestore } from './services/backup/BackupController';
-import activitiesRegistrationController from './services/activities/Activitycontroller';
+import BackupController from './services/backup/BackupController';
+
+import ActivityManager from './services/activities/ActivityManager';
+import AfkManager from './services/activities/AfkManager';
+import activitiesRegistrationController from './services/activities/ActivityController';
 
 export const NODE_ENV = process.env.NODE_ENV as "production" | "development";
 
@@ -13,24 +16,29 @@ export async function activate(ctx: vscode.ExtensionContext) {
     // auth
     const authManager = new AuthManager(ctx);
     const authService = new AuthService(authManager);
-    // time
+
+    // activity tracking
+    const activityManager = new ActivityManager();
+    const afkManager = new AfkManager(activityManager);
+
+    // timer
     const timer = new PreciseTimer();
-    const service = new TimerService(timer);
+    const service = new TimerService(timer, activityManager);
     const view = new TimerView(service);
 
+    // backup
+    const backupController = new BackupController(ctx, service, activityManager, authManager);
+
     // controllers
-
     authController(ctx, authManager, authService);
-    timerController(ctx, view, service, authManager);
+    timerController(ctx, view, service, authManager, backupController);
 
-    activitiesRegistrationController(service);
+    activitiesRegistrationController(service, activityManager, afkManager);
 
-    // use _isStopped from timer into register to make timer command toggle start/stop
     registerMenu(authService, service);
 
-    autoRestore(ctx, service); // one time restore on extension start
+    backupController.autoRestore(); // one time restore on extension start
 }
 
 export function deactivate() {
 }
-

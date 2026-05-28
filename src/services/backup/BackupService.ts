@@ -1,5 +1,3 @@
-
-
 import { ExtensionContext, Uri, workspace } from "vscode";
 import * as path from 'path';
 import { HistorySessions } from "../activities/ActivityManager";
@@ -7,12 +5,9 @@ import { HistorySessions } from "../activities/ActivityManager";
 export const BACKUP_FILE_NAME = 'backup.json';
 export const BACKUP_INTERVAL = workspace.getConfiguration('anz').get<number>('backupInterval') ?? 1000 * 60 * 5; // 5 minutes: 1000 * 60 * 5
 
-type ActiveFile = string | null
-
 export interface BackupData {
     timer: number;
     history: HistorySessions;
-    activeFile: ActiveFile;
 }
 
 const getBackupFolder = (ctx: ExtensionContext): Uri => {

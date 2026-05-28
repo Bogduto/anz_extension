@@ -1,46 +1,51 @@
 import { workspace } from "vscode";
 import { timeNow } from "../../utils/time";
-import { closeActiveSession, getActiveFile, openNewSession, setActiveFile } from "./ActivityManager";
+import ActivityManager from "./ActivityManager";
 import * as vscode from 'vscode';
 
-let idleTimer: NodeJS.Timeout | undefined;
-const IDLE_TIMEOUT = workspace.getConfiguration('anz').get<number>('afkIntervalTime') ?? 1000 * 60 * 5; // 3 секунды
-
 type ActivityType = 'AFK' | 'alt+tab';
-let previousActiveFile: string | null = null;
-let previousLanguageId: string = "unknown";
 
-let isIdle = false;
+const IDLE_TIMEOUT = workspace.getConfiguration('anz').get<number>('afkIntervalTime') ?? 1000 * 60 * 5; // 5 minutes
 
-const onIdle = (type: ActivityType) => {
-    isIdle = true;
-    const id = type;
+class AfkManager {
+    private idleTimer: NodeJS.Timeout | undefined;
+    private previousActiveFile: string | null = null;
+    private previousLanguageId: string = "unknown";
+    private isIdle: boolean = false;
 
-    previousActiveFile = getActiveFile();
-    previousLanguageId = vscode.window.activeTextEditor?.document.languageId ?? "unknown";
+    constructor(private activityManager: ActivityManager) { }
 
-    closeActiveSession(previousActiveFile, timeNow());
-    openNewSession(id, "unknown", timeNow());
-    setActiveFile(id);
-};
+    private onIdle(type: ActivityType): void {
+        this.isIdle = true;
 
-export function onIdleEnd() {
-    console.log('[onIdleEnd] isIdle:', isIdle, 'prev:', previousActiveFile);
+        this.previousActiveFile = this.activityManager.getActiveFile();
+        this.previousLanguageId = vscode.window.activeTextEditor?.document.languageId ?? "unknown";
 
-    if (!isIdle || !previousActiveFile) return;
-
-    isIdle = false;
-    closeActiveSession(getActiveFile(), timeNow());
-    setActiveFile(previousActiveFile);
-    openNewSession(previousActiveFile, previousLanguageId, timeNow());
-    previousActiveFile = null;
-    previousLanguageId = "unknown";
-}
-
-export function resetIdleTimer(type: ActivityType) {
-    if (idleTimer) {
-        clearTimeout(idleTimer);
-        onIdleEnd();
+        this.activityManager.closeActiveSession(this.previousActiveFile, timeNow());
+        this.activityManager.openNewSession(type, "unknown", timeNow());
+        this.activityManager.setActiveFile(type);
     }
-    idleTimer = setTimeout(() => onIdle(type), IDLE_TIMEOUT);
+
+    private onIdleEnd(): void {
+        console.log('[onIdleEnd] isIdle:', this.isIdle, 'prev:', this.previousActiveFile);
+
+        if (!this.isIdle || !this.previousActiveFile) return;
+
+        this.isIdle = false;
+        this.activityManager.closeActiveSession(this.activityManager.getActiveFile(), timeNow());
+        this.activityManager.setActiveFile(this.previousActiveFile);
+        this.activityManager.openNewSession(this.previousActiveFile, this.previousLanguageId, timeNow());
+        this.previousActiveFile = null;
+        this.previousLanguageId = "unknown";
+    }
+
+    public resetIdleTimer(type: ActivityType): void {
+        if (this.idleTimer) {
+            clearTimeout(this.idleTimer);
+            this.onIdleEnd();
+        }
+        this.idleTimer = setTimeout(() => this.onIdle(type), IDLE_TIMEOUT);
+    }
 }
+
+export default AfkManager;

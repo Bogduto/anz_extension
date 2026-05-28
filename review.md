@@ -420,32 +420,54 @@ interface Session {
 
 ## 9. Рекомендації (пріоритети)
 
-### 🔴 Критично (виправити перед релізом)
+> Оновлено: 2026-05-26 після рефакторингу
 
-1. **Прибрати логування токену** в `AuthManager.restoreSession()`
-2. **Видалити захардкоджені credentials** з `supabase.ts`
-3. **Виправити dev-режим** в `stop()` і `reset()` — перенести `clearHistory()` та `fire(false)` перед `return`
-4. **Перенести `activity_id`** всередину класу `TimerService`
-5. **Виправити `BackupData`** — або додати `activeFile`, або прибрати з інтерфейсу
-6. **Виправити `autoRestore`** — передавати правильний start timestamp, а не elapsed ms
+### ✅ Виправлено
 
-### 🟡 Важливо
+| # | Що виправлено |
+|---|---|
+| 1 | Логування токенів прибрано — тепер `Tokens found: true/false` |
+| 2 | Захардкоджені credentials видалені — `supabase.ts` використовує `process.env.X!` |
+| 3 | Dev-режим `stop()` і `reset()` — `clearHistory()` та `fire(false)` завжди виконуються |
+| 4 | `activity_id` перенесено в клас як `private activityId` |
+| 5 | `BackupData.activeFile` прибрано з інтерфейсу |
+| 6 | `supabase.auth.signOut()` викликається при logout через `logoutFromSupabase()` |
+| 7 | `autoRestore` перевіряє `isLoggedIn` перед API викликом |
+| 8 | Коментар IDLE_TIMEOUT виправлено — тепер "5 minutes" |
+| 9 | Timer option прихований в меню коли не залогінений |
+| 10 | `anz.RESET` додано в `package.json` contributes.commands |
+| 11 | `ActivityManager`, `AfkManager`, `BackupController` переведено на `class` |
 
-7. **Додати `supabase.auth.signOut()`** у `AuthService.logout()`
-8. **Перевіряти `isLoggedIn`** перед `getUserId()` в `autoRestore`
-9. **Виправити коментар** у `AfkManager.ts` (IDLE_TIMEOUT)
-10. **Фільтрувати `'AFK'` та `'alt+tab'`** з history перед відправкою в API
-11. **Додати перевірку** `historySize()` перед `finalizeHistory()` у `stop()`
-12. **Зареєструвати `anz.RESET`** у `package.json` contributes
+---
+
+### 🟡 Залишилось — важливо
+
+1. **`BackupController.run()`** — `activeFile` ще передається в об'єкт `data`, але вже відсутній в інтерфейсі `BackupData` → TypeScript excess property error. Потрібно прибрати рядок `activeFile: this.activityManager.getActiveFile()`
+
+2. **`stop()` не перевіряє `historySize()` перед `finalizeHistory()`** — якщо таймер запущений але жоден файл не редагувався, `finalizeHistory()` кине `Error("No active file to finalize")`. Таймер зупиниться але стан залишиться inconsistent. Варто додати перевірку:
+    ```typescript
+    if (this.activityManager.historySize() === 0) {
+        this.activityManager.clearHistory();
+        this._onDidUpdateTime.fire(false);
+        return;
+    }
+    ```
+
+3. **`close_time: interval.close_time ?? 0`** в `sessionDTO.ts` — якщо інтервал ще відкритий (`close_time === null`), на бекенд відправляється `0` (epoch `1970-01-01`). Варто передавати `Date.now()` замість `0`
+
+5. **AFK сесії потрапляють в API** — `'AFK'` і `'alt+tab'` зберігаються як pathname і відправляються на бекенд разом зі звичайними файлами. Варто фільтрувати в `finalizeHistory()` або `toSessionDTO()`
+
+---
 
 ### 🟢 Nice-to-have
 
-13. Видалити мертвий код (`readActiveFile.ts`, `currentDirectory.ts`, `activity.types.ts`)
-14. Перейменувати `Activitycontroller.ts` → `ActivityController.ts`
-15. Оптимізувати `TimerView` — рендерити тільки коли таймер активний
-16. Написати юніт-тести
-17. Змінити `activationEvents: ["*"]` на конкретний event
-18. Увімкнути `noImplicitReturns` у `tsconfig.json`
+6. **`TimerView.isRestored()`** — метод визначений але ніколи не викликається. Dead code
+7. **`TimerView` ре-рендериться кожні 100ms** навіть коли таймер зупинений — оптимізація: рендерити тільки при `isRunning === true`
+8. **`CHECK_AUTH_COMMAND`** — визначено в `commands.ts` але ніде не реєструється
+9. **`activationEvents: ["*"]`** — розширення активується при будь-якій події. Краще `onStartupFinished`
+10. **Мертві файли** — `readActiveFile.ts`, `currentDirectory.ts`, `activity.types.ts` ніде не імпортуються
+11. **Написати юніт-тести** — `extension.test.ts` містить тільки placeholder
+12. **`noImplicitReturns: true`** у `tsconfig.json` — зараз закоментовано
 
 ---
 

@@ -1,24 +1,23 @@
-import { EventEmitter, languages, window } from "vscode";
+import { EventEmitter, window } from "vscode";
 import { PreciseTimer, TimerFormatter } from "./core";
-import { getUserId, insertActivity, supabase } from "../../lib/supabase";
+import { getUserId, insertActivity } from "../../lib/supabase";
 import { titleFromPathname } from "../../utils/tittle";
-import { clearHistory, finalizeHistory, getHistory, historySize } from "../activities/ActivityManager";
+import ActivityManager from "../activities/ActivityManager";
 import { workspaceMetadata } from "../../utils/metadata";
 import { toSessionDTO } from "../../api/dto/sessionDTO";
-import { toWorkspaceDTO, Workspace } from "../../api/dto/workspaceDTO";
+import { Workspace } from "../../api/dto/workspaceDTO";
 import { PayloadDTO } from "../../api/dto/payloadDTO";
-import { NODE_ENV } from "../../extension";
 import { isDevelopment } from "../../utils/envHelper";
-
-let activity_id: number | null = null;
 
 class TimerService {
     private isRunning = false;
+    private activityId: number | null = null;
     private _onDidUpdateTime = new EventEmitter<boolean>();
     public readonly onDidUpdateTime = this._onDidUpdateTime.event;
 
     constructor(
-        private preciseTimer: PreciseTimer
+        private preciseTimer: PreciseTimer,
+        private activityManager: ActivityManager
     ) { }
 
     public toggle(): void {
@@ -39,7 +38,6 @@ class TimerService {
         this.isRunning = true;
         this.preciseTimer.start();
         this._onDidUpdateTime.fire(true);
-
     }
 
     public async stop(): Promise<void> {
@@ -48,12 +46,10 @@ class TimerService {
         this.isRunning = false;
         this.preciseTimer.pause();
 
-        const historySessions = finalizeHistory();
+        const historySessions = this.activityManager.finalizeHistory();
 
         const userId = await getUserId();
-
         const workspace = await workspaceMetadata();
-
         const workspaceTitle = titleFromPathname(workspace.name);
 
         const p_workspace = {
@@ -61,34 +57,27 @@ class TimerService {
             ...workspace
         } as Workspace;
 
-
         const p_start = this.preciseTimer.startTimeStamp;
 
         const sessionDTO = toSessionDTO(historySessions);
-        const workspaceDTO = toWorkspaceDTO({ ...p_workspace, name: workspaceTitle });
-
 
         const payload: PayloadDTO = {
-            p_activity_id: activity_id ?? null,
-            p_workspace: workspaceDTO,
+            p_activity_id: this.activityId ?? null,
+            p_workspace: { ...p_workspace, name: workspaceTitle },
             p_start,
             p_sessions: sessionDTO
         };
 
         if (isDevelopment) {
-            const v_activity_id = 1;
-            activity_id = v_activity_id;
-
             console.log("Payload for stop:", payload);
-            return;
+            this.activityId = 1;
+        } else {
+            const v_activity_id = await insertActivity(payload);
+            this.activityId = v_activity_id;
         }
 
-        const v_activity_id = await insertActivity(payload);
-        activity_id = v_activity_id;
-
-        clearHistory();
+        this.activityManager.clearHistory();
         this._onDidUpdateTime.fire(false);
-
     }
 
     public async reset(): Promise<void> {
@@ -96,15 +85,15 @@ class TimerService {
         this.preciseTimer.reset();
         this._onDidUpdateTime.fire(false);
 
-        const size = historySize();
+        const size = this.activityManager.historySize();
 
         if (size !== 0) {
-            const historySessions = finalizeHistory();
+            const historySessions = this.activityManager.finalizeHistory();
 
             const userId = await getUserId();
             const workspace = await workspaceMetadata();
-
             const workspaceTitle = titleFromPathname(workspace.name);
+
             const p_workspace = {
                 user_id: userId,
                 ...workspace
@@ -113,26 +102,24 @@ class TimerService {
             const p_start = this.preciseTimer.startTimeStamp;
 
             const sessionDTO = toSessionDTO(historySessions);
-            const workspaceDTO = toWorkspaceDTO({ ...p_workspace, name: workspaceTitle });
 
             const payload = {
                 p_activity_id: null,
-                p_workspace: workspaceDTO,
-                p_start: p_start,
+                p_workspace: { ...p_workspace, name: workspaceTitle },
+                p_start,
                 p_sessions: sessionDTO
             } as PayloadDTO;
 
             if (isDevelopment) {
                 console.log("Payload for reset:", payload);
-                return;
+            } else {
+                await insertActivity(payload);
             }
 
-            await insertActivity(payload);
-
-            clearHistory();
+            this.activityManager.clearHistory();
         }
 
-        activity_id = null;
+        this.activityId = null;
     }
 
     public getElapsedMs(): number {

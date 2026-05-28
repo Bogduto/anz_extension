@@ -2,7 +2,7 @@ import { workspace } from "vscode";
 import normalizePath from "../../utils/normalizePath";
 import { isDevelopment } from "../../utils/envHelper";
 
-export const IGNORE_FILE_MIN_DURATION = workspace.getConfiguration('anz').get<number>('ignoreFileMinDuration') ?? 1000 * 60 * 5; // 5 minutes: 1000 * 60 * 5
+export const IGNORE_FILE_MIN_DURATION = workspace.getConfiguration('anz').get<number>('ignoreFileMinDuration') ?? 1000 * 60 * 5; // 5 minutes
 
 export type TimeInterval = {
     enter_time: number;
@@ -18,177 +18,172 @@ export type HistorySession = {
 
 export type HistorySessions = HistorySession[];
 
-let historyList: HistorySessions = [];
-let activeFile: string | null = null;
+class ActivityManager {
+    private historyList: HistorySessions = [];
+    private activeFile: string | null = null;
 
-export function getActiveFile(): string | null {
-    return activeFile;
-}
-
-export function historySize(): number {
-    return historyList.length;
-}
-
-export function setActiveFile(file: string | null) {
-    activeFile = file;
-}
-
-export function getHistory(): HistorySessions {
-    return historyList;
-}
-
-export function setHistory(sessions: HistorySessions): void {
-    historyList = sessions;
-}
-
-export function clearHistory(): void {
-    historyList = [];
-}
-
-/**
- * Filters out sessions with total duration less than the specified minimum duration.
- * Returns a new filtered history without modifying the original.
- */
-export function filterHistoryByMinDuration(minDuration: number): void {
-    const filtered = historyList.filter(session => {
-        const totalDuration = session.intervals.reduce((sum, interval) => {
-            const closeTime = interval.close_time ?? Date.now();
-            return sum + (closeTime - interval.enter_time);
-        }, 0);
-        return totalDuration >= minDuration;
-    });
-
-    setHistory(filtered);
-}   
-
-/**
- * Closes the currently active file's open interval and returns the full history.
- * Throws if there is no active file or no open interval to close.
- */
-export function finalizeHistory(): HistorySessions {
-    if (!activeFile) {
-        throw new Error("No active file to finalize");
+    public getActiveFile(): string | null {
+        return this.activeFile;
     }
 
-    const closed = closeActiveSession(activeFile, Date.now());
-    
-    if (IGNORE_FILE_MIN_DURATION && !isDevelopment) {
-        filterHistoryByMinDuration(IGNORE_FILE_MIN_DURATION);
+    public setActiveFile(file: string | null): void {
+        this.activeFile = file;
     }
 
-    if (!closed) {
-        throw new Error(`Could not close interval for active file: ${activeFile}`);
-    }
-    
-    if (historySize() === 0) {
-        console.log("All sessions were filtered out by minimum duration. Returning empty history.", getHistory());
-        throw new Error(`No sessions`);
+    public getHistory(): HistorySessions {
+        return this.historyList;
     }
 
-    return historyList;
-}
+    public setHistory(sessions: HistorySessions): void {
+        this.historyList = sessions;
+    }
 
-function getOrCreateSession(pathname: string, language: string): HistorySession {
-    const normalized = normalizePath(pathname);
+    public clearHistory(): void {
+        this.historyList = [];
+    }
 
-    let session = historyList.find(s => normalizePath(s.pathname) === normalized);
+    public historySize(): number {
+        return this.historyList.length;
+    }
 
-    if (!session) {
-        const fileName = pathname.split(/[\\/]/).pop() as string;
+    /**
+     * Filters out sessions with total duration less than the specified minimum duration.
+     */
+    public filterHistoryByMinDuration(minDuration: number): void {
+        const filtered = this.historyList.filter(session => {
+            const totalDuration = session.intervals.reduce((sum, interval) => {
+                const closeTime = interval.close_time ?? Date.now();
+                return sum + (closeTime - interval.enter_time);
+            }, 0);
+            return totalDuration >= minDuration;
+        });
 
-        // createNewSession()
-        session = {
-            pathname: normalized,
-            name: fileName,
-            language,
-            intervals: [],
-        };
+        this.historyList = filtered;
+    }
 
-        historyList.push(session);
-    } else {
-        const fileName = pathname.split(/[\\/]/).pop() as string;
-        session.language = language;
-        session.name = fileName;
+    /**
+     * Closes the currently active file's open interval and returns the full history.
+     * Throws if there is no active file or all sessions are filtered out.
+     */
+    public finalizeHistory(): HistorySessions {
+        if (!this.activeFile) {
+            throw new Error("No active file to finalize");
+        }
 
-        // update
+        const closed = this.closeActiveSession(this.activeFile, Date.now());
 
-        const duplicateSessions = historyList.filter(
-            s => s !== session && normalizePath(s.pathname) === normalized
-        );
+        if (IGNORE_FILE_MIN_DURATION && !isDevelopment) {
+            this.filterHistoryByMinDuration(IGNORE_FILE_MIN_DURATION);
+        }
 
-        for (const duplicate of duplicateSessions) {
-            // may it be here? duplicate
-            session.intervals.push(...duplicate.intervals);
+        if (!closed) {
+            throw new Error(`Could not close interval for active file: ${this.activeFile}`);
+        }
 
-            console.log("[INTERVALS ADDED] ", session.intervals);
+        if (this.historySize() === 0) {
+            console.log("All sessions were filtered out by minimum duration. Returning empty history.", this.getHistory());
+            throw new Error(`No sessions`);
+        }
 
+        return this.historyList;
+    }
 
-            const duplicateIndex = historyList.indexOf(duplicate);
-            if (duplicateIndex !== -1) {
-                historyList.splice(duplicateIndex, 1);
+    private getOrCreateSession(pathname: string, language: string): HistorySession {
+        const normalized = normalizePath(pathname);
+
+        let session = this.historyList.find(s => normalizePath(s.pathname) === normalized);
+
+        if (!session) {
+            const fileName = pathname.split(/[\\/]/).pop() as string;
+
+            session = {
+                pathname: normalized,
+                name: fileName,
+                language,
+                intervals: [],
+            };
+
+            this.historyList.push(session);
+        } else {
+            const fileName = pathname.split(/[\\/]/).pop() as string;
+            session.language = language;
+            session.name = fileName;
+
+            const duplicateSessions = this.historyList.filter(
+                s => s !== session && normalizePath(s.pathname) === normalized
+            );
+
+            for (const duplicate of duplicateSessions) {
+                session.intervals.push(...duplicate.intervals);
+                console.log("[INTERVALS ADDED] ", session.intervals);
+
+                const duplicateIndex = this.historyList.indexOf(duplicate);
+                if (duplicateIndex !== -1) {
+                    this.historyList.splice(duplicateIndex, 1);
+                }
             }
         }
-    }
 
-    return session;
-}
-
-/**
- * Returns the session for the currently active file, if any.
- */
-export function getActiveSession(): HistorySession | undefined {
-    if (!activeFile) return undefined;
-    const normalized = normalizePath(activeFile);
-    return historyList.find(s => normalizePath(s.pathname) === normalized);
-}
-
-/**
- * Closes the most recent open interval for a given file path.
- * Returns true if an interval was successfully closed, false otherwise.
- */
-export function closeActiveSession(pathname: string | null, closeTime: number): boolean {
-    console.log('[closeActiveSession]', normalizePath(pathname ?? 'null'));
-
-    if (!pathname) return false;
-
-    const normalized = normalizePath(pathname);
-    const session = historyList.find(s => normalizePath(s.pathname) === normalized);
-
-    if (!session) return false;
-
-    const lastInterval = session.intervals.findLast(i => i.close_time === null);
-
-    if (!lastInterval) return false;
-
-    lastInterval.close_time = closeTime;
-
-    console.log(`Closed interval ${normalized}:`, lastInterval);
-
-    return true;
-}
-
-/**
- * Opens a new interval for the given file.
- * Does NOT close any previous session — the caller is responsible for that.
- * Returns the session, or undefined if an interval is already open (no-op).
- */
-export function openNewSession(
-    filePath: string,
-    languageId: string,
-    enterTime: number
-): HistorySession | undefined {
-    console.log('[openNewSession]', normalizePath(filePath));
-
-    const session = getOrCreateSession(filePath, languageId);
-
-    // Don't open a duplicate interval if one is already open for this file
-    const lastInterval = session.intervals.at(-1);
-    if (lastInterval && lastInterval.close_time === null) {
-        console.log("Session already open for:", filePath);
         return session;
     }
 
-    session.intervals.push({ enter_time: enterTime, close_time: null });
+    /**
+     * Returns the session for the currently active file, if any.
+     */
+    public getActiveSession(): HistorySession | undefined {
+        if (!this.activeFile) return undefined;
+        const normalized = normalizePath(this.activeFile);
+        return this.historyList.find(s => normalizePath(s.pathname) === normalized);
+    }
 
-    return session;
+    /**
+     * Closes the most recent open interval for a given file path.
+     * Returns true if an interval was successfully closed, false otherwise.
+     */
+    public closeActiveSession(pathname: string | null, closeTime: number): boolean {
+        console.log('[closeActiveSession]', normalizePath(pathname ?? 'null'));
+
+        if (!pathname) return false;
+
+        const normalized = normalizePath(pathname);
+        const session = this.historyList.find(s => normalizePath(s.pathname) === normalized);
+
+        if (!session) return false;
+
+        const lastInterval = session.intervals.findLast(i => i.close_time === null);
+
+        if (!lastInterval) return false;
+
+        lastInterval.close_time = closeTime;
+        console.log(`Closed interval ${normalized}:`, lastInterval);
+
+        return true;
+    }
+
+    /**
+     * Opens a new interval for the given file.
+     * Does NOT close any previous session — the caller is responsible for that.
+     * Returns the session, or the existing session if an interval is already open (no-op).
+     */
+    public openNewSession(
+        filePath: string,
+        languageId: string,
+        enterTime: number
+    ): HistorySession | undefined {
+        console.log('[openNewSession]', normalizePath(filePath));
+
+        const session = this.getOrCreateSession(filePath, languageId);
+
+        const lastInterval = session.intervals.at(-1);
+        if (lastInterval && lastInterval.close_time === null) {
+            console.log("Session already open for:", filePath);
+            return session;
+        }
+
+        session.intervals.push({ enter_time: enterTime, close_time: null });
+
+        return session;
+    }
 }
+
+export default ActivityManager;

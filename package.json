@@ -52,6 +52,10 @@
         "title": "Start timer"
       },
       {
+        "command": "anz.RESET",
+        "title": "Reset timer"
+      },
+      {
         "command": "anz.STOP",
         "title": "Stop timer"
       },

@@ -1,25 +1,29 @@
 import isInRepository from "../../utils/isInRepository";
 import { timeNow } from "../../utils/time";
 import { TimerService } from "../timer";
-import { getActiveFile, openNewSession, closeActiveSession, setActiveFile } from "./ActivityManager";
+import ActivityManager from "./ActivityManager";
+import AfkManager from "./AfkManager";
 import * as vscode from 'vscode';
-import { resetIdleTimer } from "./AfkManager";
 
-function activitiesRegistrationController(timer: TimerService) {
+function activitiesRegistrationController(
+    timer: TimerService,
+    activityManager: ActivityManager,
+    afkManager: AfkManager
+) {
     // Handle the file that's already open when the extension starts
     const currentEditor = vscode.window.activeTextEditor;
     if (currentEditor) {
         const filePath = currentEditor.document.uri.fsPath;
         if (isInRepository(filePath)) {
-            setActiveFile(filePath);
+            activityManager.setActiveFile(filePath);
         }
     }
 
-    vscode.window.onDidChangeTextEditorSelection(() => resetIdleTimer("alt+tab"));
+    vscode.window.onDidChangeTextEditorSelection(() => afkManager.resetIdleTimer("alt+tab"));
 
     // Responsible ONLY for keeping the session open while typing
     vscode.workspace.onDidChangeTextDocument((event) => {
-        resetIdleTimer("AFK");
+        afkManager.resetIdleTimer("AFK");
 
         const editor = vscode.window.activeTextEditor;
 
@@ -31,33 +35,32 @@ function activitiesRegistrationController(timer: TimerService) {
 
         if (!isInRepository(filePath)) return;
 
-        openNewSession(filePath, event.document.languageId, timeNow());
+        activityManager.openNewSession(filePath, event.document.languageId, timeNow());
     });
 
     // Responsible ONLY for tracking which file is active
     vscode.window.onDidChangeActiveTextEditor((editor) => {
-        resetIdleTimer("AFK");
+        afkManager.resetIdleTimer("AFK");
         const now = timeNow();
-        const prevFile = getActiveFile();
+        const prevFile = activityManager.getActiveFile();
 
         if (!editor) {
-            closeActiveSession(prevFile, now);
-            setActiveFile(null);
+            activityManager.closeActiveSession(prevFile, now);
+            activityManager.setActiveFile(null);
             return;
         }
 
         const filePath = editor.document.uri.fsPath;
 
         if (!isInRepository(filePath)) {
-            closeActiveSession(prevFile, now);
-            setActiveFile(null);
+            activityManager.closeActiveSession(prevFile, now);
+            activityManager.setActiveFile(null);
             return;
         }
 
-        closeActiveSession(prevFile, now);
-        setActiveFile(filePath);
-
-        openNewSession(filePath, editor.document.languageId, now);
+        activityManager.closeActiveSession(prevFile, now);
+        activityManager.setActiveFile(filePath);
+        activityManager.openNewSession(filePath, editor.document.languageId, now);
     });
 }
 

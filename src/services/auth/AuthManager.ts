@@ -13,7 +13,7 @@ class AuthManager {
     public async restoreSession(): Promise<boolean> {
         const accessToken = this.ctx.globalState.get<string>(ACCESS_TOKEN_KEY);
         const refreshToken = this.ctx.globalState.get<string>(REFRESH_TOKEN_KEY);
-        console.log(`[RESTORE SESSION PART 1] ACCESS ${accessToken} REFRESH ${refreshToken}`);
+        console.log(`[RESTORE SESSION] Tokens found: ${!!accessToken && !!refreshToken}`);
 
         if (!accessToken || !refreshToken) {
             this._isLoggedIn = false;
@@ -24,7 +24,7 @@ class AuthManager {
         await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
 
         const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        console.log('[REFRESH]', refreshData, refreshError);
+        console.log('[REFRESH]', refreshError ? `error: ${refreshError.message}` : 'success');
 
         // Save the new tokens so the old refresh token isn't reused next time
         if (refreshData?.session) {
@@ -33,10 +33,9 @@ class AuthManager {
         }
 
         const { data: { user }, error } = await supabase.auth.getUser();
-        console.log(`[RESTORE SESSION PART 2] error msg ${error?.message}`);
 
         const isValid = !error && !!user;
-        console.log(`[RESTORE SESSION PART 3] IS VALID ${isValid}`);
+        console.log(`[RESTORE SESSION] Valid: ${isValid}${error ? `, error: ${error.message}` : ''}`);
 
         this._isLoggedIn = isValid;
         this._onDidChangeAuth.fire(isValid);

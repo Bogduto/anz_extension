@@ -1,12 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { PayloadDTO } from "../api/dto/payloadDTO";
 
-export const SUPABASE_SCHEMA_NAME = process.env.SUPABASE_SCHEMA_NAME || "itallo";
-
-export const SUPABASE_URL = process.env.SUPABASE_URL || "https://oygjfacifeejqzyrrloy.supabase.co";
-export const SUPABASE_KEY = process.env.SUPABASE_KEY || "sb_publishable_fWVQDP_7qlubntYpobF80Q_ZCrEnzwh";
-export const SUPABASE_AUTH_PROVIDER = process.env.SUPABASE_AUTH_PROVIDER || "github";
-export const SCHEMA_NAME = process.env.SUPABASE_SCHEMA_NAME || "itallo"
+export const SUPABASE_URL = process.env.SUPABASE_URL!;
+export const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY!;
+export const SUPABASE_AUTH_PROVIDER = process.env.SUPABASE_AUTH_PROVIDER!;
+export const SUPABASE_SCHEMA_NAME = process.env.SUPABASE_SCHEMA_NAME!;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -19,6 +17,14 @@ export async function insertActivity(payload: PayloadDTO): Promise<number> {
 
     return data.activity_id;
 }
+
+export const logoutFromSupabase = async () => {
+    const { error } = await supabase.auth.signOut();    
+    if (error) {
+        console.error("Error during logout:", error);
+        throw new Error("An error occurred while logging out. Please try again.");
+    }
+};
 
 export async function getUserId() {
     const { data: { user }, error } = await supabase.auth.getUser();
