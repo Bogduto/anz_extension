@@ -67,6 +67,10 @@ class TimerService {
             console.log("Payload for stop:", payload);
             this.activityId = 1;
         } else {
+
+            console.log("PAYLOAD: ",payload);
+            
+
             const v_activity_id = await insertActivity(payload);
             this.activityId = v_activity_id;
         }

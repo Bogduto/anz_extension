@@ -3,7 +3,11 @@ import * as path from 'path';
 import { HistorySessions } from "../activities/ActivityManager";
 
 export const BACKUP_FILE_NAME = 'backup.json';
-export const BACKUP_INTERVAL = workspace.getConfiguration('anz').get<number>('backupInterval') ?? 1000 * 60 * 5; // 5 minutes: 1000 * 60 * 5
+export let BACKUP_INTERVAL = workspace.getConfiguration('anz').get<number>('backupInterval') ?? 1000 * 60 * 5; // 5 minutes: 1000 * 60 * 5
+
+export const handleChangeBackupInterval = (newValue: number) => {
+    BACKUP_INTERVAL = newValue
+}
 
 export interface BackupData {
     startTimeStamp: number;

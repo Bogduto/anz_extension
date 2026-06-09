@@ -2,7 +2,11 @@ import { workspace } from "vscode";
 import normalizePath from "../../utils/normalizePath";
 import { isDevelopment } from "../../utils/envHelper";
 
-export const IGNORE_FILE_MIN_DURATION = workspace.getConfiguration('anz').get<number>('ignoreFileMinDuration') ?? 1000 * 60 * 5; // 5 minutes
+export let IGNORE_FILE_MIN_DURATION = workspace.getConfiguration('anz').get<number>('ignoreFileMinDuration') ?? 1000 * 60 * 5; // 5 minutes
+
+export const handleChangeIgnoreFileMinDuration = (newValue: number) => {
+    IGNORE_FILE_MIN_DURATION = newValue
+}
 
 export type TimeInterval = {
     enter_time: number;

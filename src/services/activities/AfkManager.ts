@@ -5,7 +5,11 @@ import * as vscode from 'vscode';
 
 type ActivityType = 'AFK' | 'alt+tab';
 
-const IDLE_TIMEOUT = workspace.getConfiguration('anz').get<number>('afkIntervalTime') ?? 1000 * 60 * 5; // 5 minutes
+export let IDLE_TIMEOUT = workspace.getConfiguration('anz').get<number>('afkIntervalTime') ?? 1000 * 60 * 5; // 5 minutes
+
+export const handleChangeIdleTimeout = (newValue: number) => {
+    IDLE_TIMEOUT = newValue;
+}
 
 class AfkManager {
     private idleTimer: NodeJS.Timeout | undefined;
