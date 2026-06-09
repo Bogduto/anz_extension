@@ -4,7 +4,9 @@ const dotenv = require("dotenv");
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
 
-const env = dotenv.config().parsed || {};
+const envFile = production ? '.env.production' : '.env.development';
+const env = dotenv.config({ path: envFile }).parsed || {};
+
 const define = {};
 for (const [key, value] of Object.entries(env)) {
     define[`process.env.${key}`] = JSON.stringify(value);
