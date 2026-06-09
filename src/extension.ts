@@ -4,15 +4,13 @@ import { authController, AuthManager, AuthService } from './services/auth';
 import { timerController, TimerService, TimerView } from './services/timer';
 import { PreciseTimer } from './services/timer/core';
 import BackupController from './services/backup/BackupController';
-
 import ActivityManager from './services/activities/ActivityManager';
 import AfkManager from './services/activities/AfkManager';
-import activitiesRegistrationController from './services/activities/ActivityController';
-
-export const NODE_ENV = process.env.NODE_ENV as "production" | "development";
+import activitiesRegistrationController from './services/activities/Activitycontroller';
+import settingsController from './services/settings/SettingsController';
 
 export async function activate(ctx: vscode.ExtensionContext) {
-
+    
     // auth
     const authManager = new AuthManager(ctx);
     const authService = new AuthService(authManager);
@@ -38,6 +36,8 @@ export async function activate(ctx: vscode.ExtensionContext) {
     registerMenu(authService, service);
 
     backupController.autoRestore(); // one time restore on extension start
+
+    settingsController()
 }
 
 export function deactivate() {
