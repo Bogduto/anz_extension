@@ -54,7 +54,7 @@ class AuthManager {
         await this.ctx.globalState.update(ACCESS_TOKEN_KEY, accessToken);
         await this.ctx.globalState.update(REFRESH_TOKEN_KEY, refreshToken);
 
-        this._isLoggedIn = true; // 🔥 ВАЖНО
+        this._isLoggedIn = true; 
         this._onDidChangeAuth.fire(true);
     }
 
@@ -62,7 +62,7 @@ class AuthManager {
         await this.ctx.globalState.update(ACCESS_TOKEN_KEY, null);
         await this.ctx.globalState.update(REFRESH_TOKEN_KEY, null);
 
-        this._isLoggedIn = false; // 🔥 ВАЖНО
+        this._isLoggedIn = false; 
         this._onDidChangeAuth.fire(false);
     }
 

@@ -17,7 +17,7 @@ class AfkManager {
     private previousLanguageId: string = "unknown";
     private isIdle: boolean = false;
 
-    constructor(private activityManager: ActivityManager) { }
+    constructor(private activityManager: ActivityManager, private isTimerRunning: () => boolean) { }
 
     private onIdle(type: ActivityType): void {
         this.isIdle = true;
@@ -25,17 +25,20 @@ class AfkManager {
         this.previousActiveFile = this.activityManager.getActiveFile();
         this.previousLanguageId = vscode.window.activeTextEditor?.document.languageId ?? "unknown";
 
+        if (!this.previousActiveFile || !this.isTimerRunning()) return;
+
         this.activityManager.closeActiveSession(this.previousActiveFile, timeNow());
         this.activityManager.openNewSession(type, "unknown", timeNow());
         this.activityManager.setActiveFile(type);
     }
 
     private onIdleEnd(): void {
-        console.log('[onIdleEnd] isIdle:', this.isIdle, 'prev:', this.previousActiveFile);
-
-        if (!this.isIdle || !this.previousActiveFile) return;
+        if (!this.isIdle) return;
 
         this.isIdle = false;
+
+        if (!this.previousActiveFile) return;
+
         this.activityManager.closeActiveSession(this.activityManager.getActiveFile(), timeNow());
         this.activityManager.setActiveFile(this.previousActiveFile);
         this.activityManager.openNewSession(this.previousActiveFile, this.previousLanguageId, timeNow());
@@ -46,7 +49,9 @@ class AfkManager {
     public resetIdleTimer(type: ActivityType): void {
         if (this.idleTimer) {
             clearTimeout(this.idleTimer);
-            this.onIdleEnd();
+            if (this.isIdle) {
+                this.onIdleEnd();
+            }
         }
         this.idleTimer = setTimeout(() => this.onIdle(type), IDLE_TIMEOUT);
     }

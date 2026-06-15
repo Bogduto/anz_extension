@@ -76,12 +76,16 @@ class ActivityManager {
 
         const closed = this.closeActiveSession(this.activeFile, Date.now());
 
-        if (IGNORE_FILE_MIN_DURATION && !isDevelopment) {
-            this.filterHistoryByMinDuration(IGNORE_FILE_MIN_DURATION);
-        }
-
         if (!closed) {
             throw new Error(`Could not close interval for active file: ${this.activeFile}`);
+        }
+
+        if (isDevelopment) {
+            console.log("this.historyList ", this.historyList)
+        }
+
+        if (IGNORE_FILE_MIN_DURATION && !isDevelopment) {
+            this.filterHistoryByMinDuration(IGNORE_FILE_MIN_DURATION);
         }
 
         if (this.historySize() === 0) {

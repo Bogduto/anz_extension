@@ -9,7 +9,6 @@ async function authController(ctx: ExtensionContext, authSessionMenager: AuthMan
     
     if (!restored) {
         window.showInformationMessage("No active session, please login");
-        // return;
     }
 
     ctx.subscriptions.push(

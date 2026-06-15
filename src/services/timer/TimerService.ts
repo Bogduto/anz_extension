@@ -41,42 +41,41 @@ class TimerService {
             return;
         }
 
-        const historySessions = this.activityManager.finalizeHistory();
+        try {
+            const historySessions = this.activityManager.finalizeHistory();
 
-        const userId = await getUserId();
-        const workspace = await workspaceMetadata();
-        const workspaceTitle = titleFromPathname(workspace.name);
+            const userId = await getUserId();
+            const workspace = await workspaceMetadata();
+            const workspaceTitle = titleFromPathname(workspace.name);
 
-        const p_workspace = {
-            user_id: userId,
-            ...workspace
-        } as Workspace;
+            const p_workspace = {
+                user_id: userId,
+                ...workspace
+            } as Workspace;
 
-        const p_start = this.preciseTimer.startTimeStamp;
+            const p_start = this.preciseTimer.startTimeStamp;
 
-        const sessionDTO = toSessionDTO(historySessions);
+            const sessionDTO = toSessionDTO(historySessions);
 
-        const payload: PayloadDTO = {
-            p_activity_id: this.activityId ?? null,
-            p_workspace: { ...p_workspace, name: workspaceTitle },
-            p_start,
-            p_sessions: sessionDTO
-        };
+            const payload: PayloadDTO = {
+                p_activity_id: this.activityId ?? null,
+                p_workspace: { ...p_workspace, name: workspaceTitle },
+                p_start,
+                p_sessions: sessionDTO
+            };
 
-        if (isDevelopment) {
-            console.log("Payload for stop:", payload);
-            this.activityId = 1;
-        } else {
-
-            console.log("PAYLOAD: ",payload);
-            
-
-            const v_activity_id = await insertActivity(payload);
-            this.activityId = v_activity_id;
+            if (isDevelopment) {
+                console.log("Payload for stop:", payload);
+                this.activityId = 1;
+            } else {
+                console.log("PAYLOAD: ", payload);
+                const v_activity_id = await insertActivity(payload);
+                this.activityId = v_activity_id;
+            }
+        } finally {
+            this.activityManager.clearHistory();
+            this._onDidUpdateTime.fire(false);
         }
-
-        this.activityManager.clearHistory();
-        this._onDidUpdateTime.fire(false);
     }
 
     public async reset(): Promise<void> {
@@ -84,9 +83,12 @@ class TimerService {
         this.preciseTimer.reset();
         this._onDidUpdateTime.fire(false);
 
-        const size = this.activityManager.historySize();
+        if (this.activityManager.historySize() === 0) {
+            this.activityId = null;
+            return;
+        }
 
-        if (size !== 0) {
+        try {
             const historySessions = this.activityManager.finalizeHistory();
 
             const userId = await getUserId();
@@ -114,11 +116,10 @@ class TimerService {
             } else {
                 await insertActivity(payload);
             }
-
+        } finally {
             this.activityManager.clearHistory();
+            this.activityId = null;
         }
-
-        this.activityId = null;
     }
 
     public startTimeStamp(): number {

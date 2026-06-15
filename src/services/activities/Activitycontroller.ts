@@ -16,6 +16,11 @@ function activitiesRegistrationController(
         const filePath = currentEditor.document.uri.fsPath;
         if (isInRepository(filePath)) {
             activityManager.setActiveFile(filePath);
+
+            if (timer.isRunningState) {
+                activityManager.openNewSession(filePath, currentEditor.document.languageId, timeNow());
+            }
+
         }
     }
 

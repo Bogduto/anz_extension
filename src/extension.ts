@@ -17,11 +17,12 @@ export async function activate(ctx: vscode.ExtensionContext) {
 
     // activity tracking
     const activityManager = new ActivityManager();
-    const afkManager = new AfkManager(activityManager);
 
     // timer
     const timer = new PreciseTimer();
     const service = new TimerService(timer, activityManager);
+
+    const afkManager = new AfkManager(activityManager, () => service.isRunningState);
     const view = new TimerView(service);
 
     // backup
