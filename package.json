@@ -78,7 +78,10 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vscode-test",
-    "openNewWindow": "code --extensionDevelopmentPath=$PWD"
+    "openNewWindow": "code --extensionDevelopmentPath=$PWD",
+    "package-extension": "npx vsce package --allow-missing-repository",
+    "install-package": "code --install-extension",
+    "remove-package-extension": "code --uninstall-extension bogduto.anz"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
